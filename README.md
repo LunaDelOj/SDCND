@@ -1,53 +1,83 @@
-# **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+# **Finding Lane Lines on the Road**
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+The goals / steps of this project are the following:
+* Make a pipeline that finds lane lines on the road
+* Reflect on your work in a written report
 
-Overview
+
+[//]: # (Image References)
+
+[image1]: ./writeup_images/grayscale.jpg "Grayscale"
+[image2]: ./writeup_images/edges.jpg "Canny Edge Detection"
+[image3]: ./writeup_images/regionMask.jpg "Region Masking"
+[image4]: ./writeup_images/houghRegionMask.jpg "Hough Transform"
+[image5]: ./writeup_images/houghRegionMaskBestFit.jpg "Hough Transform Best Fit Lines"
+[image6]: ./writeup_images/houghOverlay.jpg "Hough Transform Overlay"
+[image7]: ./writeup_images/spuriousDetectionEffect.png "Spurious Detection Effect"
+[image8]: ./writeup_images/histogramUnfiltered.jpg "Unfiltered Histogram"
+[image9]: ./writeup_images/histogramFiltered.jpg "Filtered Histogram"
+[image10]: ./writeup_images/postFiltering.png "Final Output"
+
+
 ---
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+### Reflection
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+### 1. Describe your pipeline. As part of the description, explain how you modified the draw_lines() function.
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+My pipeline consisted of five steps: grayscale conversion, canny edge detection with median automatic thresholding, region masking, hough transform for line detection, and line drawing using least squares fitting to find the optimal line to draw.
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+The first stage of the pipeline is to transform the image from the RGB color space to one more convenient to work with.  Grayscale simplifies the representation of the image to relative intensities, which provides the majority of information we need to perform most signal processing tasks.  Below is an example of a grayscale image.
+
+![alt text][image1]
+
+Next, Canny edge detection is used to find the edges in the image.  The Canny algorithm finds the intensity gradient of the image.  It uses this to find strong edges, which are defined as values of the gradient which are above a threshold.  The threshold is calculated automatically using a ratio of 1:3 of the median value of the gradient.  Using a threshold ratio based on the median provided solid edge detection performance as shown below.
+
+![alt text][image2]
+
+After the edges have been found, region masking is applied to limit the image to a field of interest bounding the lane lines.  The region masking applied to the edges image is displayed below.
+
+![alt text][image3]
+
+With the edges detected and the image region masked, the next step will be to detect lines in the image.  The Hough Transform is the technique used to do this.  The Hough Transform converts lines from the image space (note: x, y coordinates of each pixel in the image) to the Hough Space (note: a points radial distance from the origin and it's angle off the x axis).  In the Hough Space, a point will be represented as a sinusoid representing all possible lines that could contain that point.  If sinusoids intersect in Hough Space, a line that contains the points described by the sinusoids is found.  The detected lines are shown below.
+
+![alt text][image4]
+
+Lastly, best fit lines representing the lane lines are drawn on the image.  The Hough Transform outputs the coordinates of a pair of points describe the lines detected.  The coordinates are taken to find the slope of each line and partition the lines into lines left of the center of the image and right of the center of the image.  Next, a linear least squares fit is performed to find the meta-lines, which best represent the trend of the left and right lines.  This seemed to provide decent performance, as shown below.
+
+![alt text][image5]
+
+Overlaying these lines on the original image, yields:
+
+![alt text][image6]
+
+However, this technique did not seem to perform so well on the yellow lane line video.  Spurious detections seemed to really throw the lines off, as shown below.
+
+![alt text][image7]
+
+Histograms for both the left and right slopes shows small extreme peaks caused by spurious detections.  
+
+![alt text][image8]
+
+Filter values were chosen between the peaks of the distributions to perform outlier rejection.  Applying these filter values yielded the following histograms.
+
+![alt text][image9]
+
+This filtering fixed the problem.
+
+![alt text][image10]
 
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+### 2. Identify potential shortcomings with your current pipeline
 
-1. Describe the pipeline
+My pipeline is prone to spurious detections.  I used a slope filtering technique to achieve solid performance on the videos for the assignment, but this technique would not generalize well.
 
-2. Identify any shortcomings
+From testing my pipeline on the challenge video, it clearly has problems with shadows, debris on the road, and curved lines.
 
-3. Suggest possible improvements
+### 3. Suggest possible improvements to your pipeline
 
-We encourage using images in your writeup to demonstrate how your pipeline works.  
+The pipeline could be improved by more careful tuning of the hough transform parameters.  Although, after spending quite some time playing with them, I ultimately felt I achieved an acceptable level of performance.
 
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
+Additionally, using a different color space like HSV could likely help avoid the problems with shadows and road debris.
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
-
-
-The Project
----
-
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
-
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
-
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
+Lastly, in order to handle the curves, the current pipeline seems like it would need an overhaul.  The region masking is fine for the videos given, but a sharp curve would be problematic.  Portions of the lane immediately in front of the vehicle would likely fall outside the region of interest, while picking up a lot of objects that you would not care about (ie. lanes on the other side of the road).  Estimating the radius of curvature and using that to update the region masking would likely help.
